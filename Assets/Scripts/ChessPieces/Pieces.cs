@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -20,6 +21,7 @@ public class Pieces : MonoBehaviour
     public int CurrentX;
     public int CurrentY;
     public ChessPieceType Type;
+    public bool IsDead = false;
 
     //The next desired position
     private Vector3 desiredPosition;
@@ -33,11 +35,11 @@ public class Pieces : MonoBehaviour
 
     private void Update()
     {
-        transform.position = Vector3.Lerp(transform.position, desiredPosition, Time.deltaTime * 10);
-        transform.localScale = Vector3.Lerp(transform.localScale, desiredScale, Time.deltaTime * 10);
+        //transform.position = Vector3.Lerp(transform.position, desiredPosition, Time.deltaTime * 10);
+        //transform.localScale = Vector3.Lerp(transform.localScale, desiredScale, Time.deltaTime * 10);
     }
 
-    public virtual void SetPosition(Vector3 position, bool force = false)
+    public virtual void SetPosition(Vector3 position, bool force = true)
     {
         desiredPosition = position;
         if (force)
@@ -92,5 +94,26 @@ public class Pieces : MonoBehaviour
     public virtual SpecialMove GetSpecialMoves(ref Pieces[,] board, ref List<Vector2Int[]> moveList, ref List<Vector2Int> availableMoves)
     {
         return SpecialMove.None;
+    }
+
+    public Pieces Clone()
+    {
+        switch (Type)
+        {
+            case ChessPieceType.King:
+                return this.MemberwiseClone() as King;
+            case ChessPieceType.Bishop:
+                return this.MemberwiseClone() as Bishop;
+            case ChessPieceType.Pawn:
+                return this.MemberwiseClone() as Pawn;
+            case ChessPieceType.Knight:
+                return this.MemberwiseClone() as Knight;
+            case ChessPieceType.Queen:
+                return this.MemberwiseClone() as Queen;
+            case ChessPieceType.Rook:
+                return this.MemberwiseClone() as Rook;
+            default:
+                return this.MemberwiseClone() as Pieces;
+        }
     }
 }

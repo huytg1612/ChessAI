@@ -12,6 +12,15 @@ public enum SpecialMove
     Promotion
 }
 
+public enum ChessPiecePoint
+{
+    Pawn = 10,
+    Rook = 50,
+    Knight = 30,
+    Bishop = 30,
+    Queen = 90,
+    King = 900
+}
 public class ChessBoard : MonoBehaviour
 {
     [Header("Art")]
@@ -54,6 +63,222 @@ public class ChessBoard : MonoBehaviour
         
     }
 
+    private int Evaluate(Pieces[,] pieces, int teamColor)
+    {
+        int whitePoint = 0;
+        int blackPoint = 0;
+
+        for (int x = 0; x < TILE_COUNT_X; x++)
+        {
+            for (int y = 0; y < TILE_COUNT_Y; y++)
+            {
+                var piece = pieces[x, y];
+                int point;
+                if(piece != null && !piece.IsDead)
+                {
+                    switch (piece.Type)
+                    {
+                        case ChessPieceType.King:
+                            point = (int)ChessPiecePoint.King;
+                            break;
+                        case ChessPieceType.Bishop:
+                            point = (int)ChessPiecePoint.Bishop;
+                            break;
+                        case ChessPieceType.Pawn:
+                            point = (int)ChessPiecePoint.Pawn;
+                            break;
+                        case ChessPieceType.Knight:
+                            point = (int)ChessPiecePoint.Knight;
+                            break;
+                        case ChessPieceType.Queen:
+                            point = (int)ChessPiecePoint.Queen;
+                            break;
+                        case ChessPieceType.Rook:
+                            point = (int)ChessPiecePoint.Rook;
+                            break;
+                        default:
+                            point = 0;
+                            break;
+                    }
+
+                    if (piece.Team == TEAM_WHITE)
+                        whitePoint += point;
+                    else
+                        blackPoint += point;
+                }
+            }
+        }
+
+        if (teamColor == TEAM_WHITE)
+            return whitePoint - blackPoint;
+        else
+            return blackPoint - whitePoint;
+    }
+
+    private List<Pieces> GetPiecesByTeam(ref Pieces[,] pieces, int teamColor)
+    {
+        var result = new List<Pieces>();
+        for (int x = 0; x < TILE_COUNT_X; x++)
+        {
+            for (int y = 0; y < TILE_COUNT_Y; y++)
+            {
+                var piece = pieces[x, y];
+                if (piece != null && piece.Team == teamColor && !piece.IsDead)
+                    result.Add(piece);
+            }
+        }
+
+        return result;
+    }
+
+    private void AIMove()
+    {
+        List<Pieces> blackPieces = GetPiecesByTeam(ref Pieces, TEAM_BLACK);
+        List<Pieces> whitePieces = GetPiecesByTeam(ref Pieces, TEAM_WHITE);
+        Debug.Log("Black Pieces: " + blackPieces.Count);
+        Debug.Log("White Pieces: " + whitePieces.Count);
+        Pieces pickedPiece = null;
+        Vector2Int bestMove = -Vector2Int.one;
+        List<Vector2Int> availableMoves = new List<Vector2Int>();
+        int bestValue = int.MinValue;
+
+        foreach (var piece in blackPieces)
+        {
+            AvailableMoves = piece.GetAvailableMoves(ref Pieces, TILE_COUNT_X, TILE_COUNT_Y);
+            //Get a list of special moves
+            //piece.GetSpecialMoves(ref Pieces, ref MoveList, ref AvailableMoves);
+            //PreventCheck();
+            foreach(var move in AvailableMoves)
+            {
+                var currenPosition = new Vector2Int(piece.CurrentX, piece.CurrentY);
+                Pieces targetPiece = null;
+                if (Pieces[move.x, move.y] != null)
+                    targetPiece = Pieces[move.x, move.y].Clone();
+
+                Pieces[move.x, move.y] = piece;
+                piece.CurrentX = move.x;
+                piece.CurrentY = move.y;
+                Pieces[currenPosition.x, currenPosition.y] = null;
+                var val = Minimax(Pieces.Clone() as Pieces[,], 3, false);
+                Pieces[currenPosition.x, currenPosition.y] = piece;
+                piece.CurrentX = currenPosition.x;
+                piece.CurrentY = currenPosition.y;
+                Pieces[move.x, move.y] = targetPiece;
+                if(val > bestValue)
+                {
+                    bestMove = move;
+                    bestValue = val;
+                    pickedPiece = piece;
+                    availableMoves = new List<Vector2Int>(AvailableMoves);
+                }
+            }
+        }
+
+        if(pickedPiece != null)
+        {
+            Debug.Log("Picked piece: " + pickedPiece);
+            Debug.Log("From: " + new Vector2Int(pickedPiece.CurrentX, pickedPiece.CurrentY));
+            AvailableMoves = availableMoves;
+            MoveTo(pickedPiece, bestMove.x, bestMove.y);
+            RemoveHightlight();
+        }
+
+        Debug.Log("Move: " + bestMove);
+        Debug.Log("Value: " + bestValue);
+
+    }
+
+    private bool IsGameOver(Pieces[,] pieces)
+    {
+        Pieces whiteKing = null;
+        Pieces blackKing = null;
+        for (int x = 0; x < TILE_COUNT_X; x++)
+        {
+            for (int y = 0; y < TILE_COUNT_Y; y++)
+            {
+                var piece = pieces[x, y];
+                if(piece != null && !piece.IsDead && piece.Type == ChessPieceType.King)
+                {
+                    if (piece.Team == TEAM_BLACK)
+                        blackKing = piece;
+                    else
+                        whiteKing = piece;
+                }
+            }
+        }
+
+        return whiteKing == null || blackKing == null;
+    }
+
+    private int Minimax(Pieces[,] pieces, int depth, bool isMaximizingPlayer)
+    {
+        if (depth == 0 || IsGameOver(pieces))
+            return Evaluate(pieces, isMaximizingPlayer ? TEAM_BLACK : TEAM_WHITE);
+
+        if (isMaximizingPlayer)
+        {
+            int maxVal = int.MinValue;
+            List<Pieces> blackPieces = GetPiecesByTeam(ref pieces, TEAM_BLACK);
+            foreach(var piece in blackPieces)
+            {
+                var availableMoves = piece.GetAvailableMoves(ref pieces, TILE_COUNT_X, TILE_COUNT_Y);
+                foreach(var move in availableMoves)
+                {
+                    var currenPosition = new Vector2Int(piece.CurrentX, piece.CurrentY);
+                    Pieces targetPiece = null;
+                    if (pieces[move.x, move.y] != null)
+                        targetPiece = pieces[move.x, move.y].Clone();
+                    pieces[move.x, move.y] = piece;
+                    piece.CurrentX = move.x;
+                    piece.CurrentY = move.y;
+                    pieces[currenPosition.x, currenPosition.y] = null;
+                    var val = Minimax(pieces.Clone() as Pieces[,], depth - 1, false);
+                    pieces[currenPosition.x, currenPosition.y] = piece;
+                    piece.CurrentX = currenPosition.x;
+                    piece.CurrentY = currenPosition.y;
+                    pieces[move.x, move.y] = targetPiece;
+                    if (val > maxVal)
+                    {
+                        maxVal = val;
+                    }
+                }
+            }
+
+            return maxVal;
+        }
+        else
+        {
+            int minVal = int.MaxValue;
+            List<Pieces> whitePieces = GetPiecesByTeam(ref pieces, TEAM_WHITE);
+            foreach (var piece in whitePieces)
+            {
+                var availableMoves = piece.GetAvailableMoves(ref pieces, TILE_COUNT_X, TILE_COUNT_Y);
+                foreach (var move in availableMoves)
+                {
+                    var currenPosition = new Vector2Int(piece.CurrentX, piece.CurrentY);
+                    Pieces targetPiece = null;
+                    if (pieces[move.x, move.y] != null)
+                        targetPiece = pieces[move.x, move.y].Clone();
+                    pieces[move.x, move.y] = piece;
+                    piece.CurrentX = move.x;
+                    piece.CurrentY = move.y;
+                    pieces[currenPosition.x, currenPosition.y] = null;
+                    var val = Minimax(pieces.Clone() as Pieces[,], depth - 1, true);
+                    pieces[currenPosition.x, currenPosition.y] = piece;
+                    piece.CurrentX = currenPosition.x;
+                    piece.CurrentY = currenPosition.y;
+                    pieces[move.x, move.y] = targetPiece;
+                    if (val < minVal)
+                    {
+                        minVal = val;
+                    }
+                }
+            }
+
+            return minVal;
+        }
+    }
+
     // Update is called once per frame
     void Update()
     {
@@ -63,90 +288,97 @@ public class ChessBoard : MonoBehaviour
             return;
         }
 
-        RaycastHit hitInfo; //Get the gameobject's info when it is hit
-        Ray ray = CurrentCamera.ScreenPointToRay(Input.mousePosition); //Whenever mouse moved, get the Ray
-
-        //IF the Ray hit the game object with Layer Mask named "Tile, Hover, Highlight", get the gameobject info 
-        if (Physics.Raycast(ray, out hitInfo, 100, LayerMask.GetMask("Tile", "Hover", "Highlight")))
+        if (CurrentTurn == TEAM_BLACK)
         {
-            Vector2Int hitPosition = LookupTileIndex(hitInfo.transform.gameObject);
-
-            //If the previous hover is nothing, we set the currentHover to hitPosition
-            if(CurrentHover == -Vector2Int.one)
-            {
-                CurrentHover = hitPosition;
-                Tiles[hitPosition.x, hitPosition.y].layer = LayerMask.NameToLayer("Hover");
-            }
-
-            //If the hitPosition is different from the previous hover, set the previous hover to Tile and the hitPosition to current 
-            if(CurrentHover != hitPosition)
-            {
-                Tiles[CurrentHover.x, CurrentHover.y].layer = IsTileAvailableMove(ref AvailableMoves, CurrentHover) ? LayerMask.NameToLayer("Highlight") : LayerMask.NameToLayer("Tile");
-                CurrentHover = hitPosition;
-                Tiles[hitPosition.x, hitPosition.y].layer = LayerMask.NameToLayer("Hover");
-            }
-
-            //If pick the piece up
-            if (Input.GetMouseButtonDown(0))
-            {
-                if(Pieces[hitPosition.x, hitPosition.y] != null)
-                {
-                    if (CurrentTurn == Pieces[hitPosition.x, hitPosition.y].Team)
-                    {
-                        CurrentlyDragging = Pieces[hitPosition.x, hitPosition.y];
-                        AvailableMoves = CurrentlyDragging.GetAvailableMoves(ref Pieces, TILE_COUNT_X, TILE_COUNT_Y);
-                        //Get a list of special moves
-                        SpecialMove = CurrentlyDragging.GetSpecialMoves(ref Pieces, ref MoveList, ref AvailableMoves);
-                        PreventCheck();
-                        HightlightAvailableMoves();
-                    }
-                }
-            }
-
-            //If put the piece down
-            if (Input.GetMouseButtonUp(0) && CurrentlyDragging != null)
-            {
-                Vector2Int previousPosition = new Vector2Int(CurrentlyDragging.CurrentX, CurrentlyDragging.CurrentY);
-
-                bool validMove = MoveTo(CurrentlyDragging, hitPosition.x, hitPosition.y);
-                if (!validMove)
-                {
-                    CurrentlyDragging.SetPosition(GetTileCenter(previousPosition.x, previousPosition.y));
-                }
-                
-                CurrentlyDragging = null;
-                RemoveHightlight();
-            }
-
+            AIMove();
         }
-        //If the mouse move out side of the ChessBoard, reset the previous Tile's Layer Mask
         else
         {
-            if(CurrentHover != -Vector2Int.one)
+            RaycastHit hitInfo; //Get the gameobject's info when it is hit
+            Ray ray = CurrentCamera.ScreenPointToRay(Input.mousePosition); //Whenever mouse moved, get the Ray
+
+            //IF the Ray hit the game object with Layer Mask named "Tile, Hover, Highlight", get the gameobject info 
+            if (Physics.Raycast(ray, out hitInfo, 100, LayerMask.GetMask("Tile", "Hover", "Highlight")))
             {
-                Tiles[CurrentHover.x, CurrentHover.y].layer = IsTileAvailableMove(ref AvailableMoves, CurrentHover) ? LayerMask.NameToLayer("Highlight") : LayerMask.NameToLayer("Tile");
-                CurrentHover = -Vector2Int.one;
+                Vector2Int hitPosition = LookupTileIndex(hitInfo.transform.gameObject);
+
+                //If the previous hover is nothing, we set the currentHover to hitPosition
+                if (CurrentHover == -Vector2Int.one)
+                {
+                    CurrentHover = hitPosition;
+                    Tiles[hitPosition.x, hitPosition.y].layer = LayerMask.NameToLayer("Hover");
+                }
+
+                //If the hitPosition is different from the previous hover, set the previous hover to Tile and the hitPosition to current 
+                if (CurrentHover != hitPosition)
+                {
+                    Tiles[CurrentHover.x, CurrentHover.y].layer = IsTileAvailableMove(ref AvailableMoves, CurrentHover) ? LayerMask.NameToLayer("Highlight") : LayerMask.NameToLayer("Tile");
+                    CurrentHover = hitPosition;
+                    Tiles[hitPosition.x, hitPosition.y].layer = LayerMask.NameToLayer("Hover");
+                }
+
+                //If pick the piece up
+                if (Input.GetMouseButtonDown(0))
+                {
+                    if (Pieces[hitPosition.x, hitPosition.y] != null)
+                    {
+                        if (CurrentTurn == Pieces[hitPosition.x, hitPosition.y].Team && CurrentTurn == TEAM_WHITE)
+                        {
+                            CurrentlyDragging = Pieces[hitPosition.x, hitPosition.y];
+                            AvailableMoves = CurrentlyDragging.GetAvailableMoves(ref Pieces, TILE_COUNT_X, TILE_COUNT_Y);
+                            //Get a list of special moves
+                            SpecialMove = CurrentlyDragging.GetSpecialMoves(ref Pieces, ref MoveList, ref AvailableMoves);
+                            PreventCheck();
+                            HightlightAvailableMoves();
+                        }
+                    }
+                }
+
+                //If put the piece down
+                if (Input.GetMouseButtonUp(0) && CurrentlyDragging != null)
+                {
+                    Vector2Int previousPosition = new Vector2Int(CurrentlyDragging.CurrentX, CurrentlyDragging.CurrentY);
+
+                    bool validMove = MoveTo(CurrentlyDragging, hitPosition.x, hitPosition.y);
+                    if (!validMove)
+                    {
+                        CurrentlyDragging.SetPosition(GetTileCenter(previousPosition.x, previousPosition.y));
+                    }
+
+                    CurrentlyDragging = null;
+                    RemoveHightlight();
+                }
+
+            }
+            //If the mouse move out side of the ChessBoard, reset the previous Tile's Layer Mask
+            else
+            {
+                if (CurrentHover != -Vector2Int.one)
+                {
+                    Tiles[CurrentHover.x, CurrentHover.y].layer = IsTileAvailableMove(ref AvailableMoves, CurrentHover) ? LayerMask.NameToLayer("Highlight") : LayerMask.NameToLayer("Tile");
+                    CurrentHover = -Vector2Int.one;
+                }
+
+                //Prevent the case, move chess out of board.
+                if (CurrentlyDragging && Input.GetMouseButtonUp(0))
+                {
+                    CurrentlyDragging.SetPosition(GetTileCenter(CurrentlyDragging.CurrentX, CurrentlyDragging.CurrentY));
+                    CurrentlyDragging = null;
+                    RemoveHightlight();
+                }
             }
 
-            //Prevent the case, move chess out of board.
-            if(CurrentlyDragging && Input.GetMouseButtonUp(0))
+            if (CurrentlyDragging)
             {
-                CurrentlyDragging.SetPosition(GetTileCenter(CurrentlyDragging.CurrentX, CurrentlyDragging.CurrentY));
-                CurrentlyDragging = null;
-                RemoveHightlight();
-            }
-        }
+                //Create a plane which is above the chess board
+                Plane plane = new Plane(Vector3.up, Vector3.up * YOffset);
+                float distance = 0.0f;
 
-        if (CurrentlyDragging)
-        {
-            //Create a plane which is above the chess board
-            Plane plane = new Plane(Vector3.up, Vector3.up * YOffset);
-            float distance = 0.0f;
-
-            //Stick the Piece to the Plane
-            if (plane.Raycast(ray, out distance))
-            {
-                CurrentlyDragging.SetPosition(ray.GetPoint(distance) + Vector3.up * DragOffset);
+                //Stick the Piece to the Plane
+                if (plane.Raycast(ray, out distance))
+                {
+                    CurrentlyDragging.SetPosition(ray.GetPoint(distance) + Vector3.up * DragOffset);
+                }
             }
         }
     }
@@ -167,6 +399,7 @@ public class ChessBoard : MonoBehaviour
             //Kill the opponent piece
             if(otherPiece.Team != piece.Team)
             {
+                otherPiece.IsDead = true;
                 otherPiece.SetScale(Vector3.one * DeathScale);
                 if (otherPiece.Team == 0)
                 {
@@ -204,7 +437,7 @@ public class ChessBoard : MonoBehaviour
         Pieces[previousPosition.x, previousPosition.y] = null;
 
         //Move the piece to the right place
-        PositionSinglePiece(x, y);
+        PositionSinglePiece(x, y, true);
 
         if (CurrentTurn == TEAM_WHITE)
             CurrentTurn = TEAM_BLACK;
@@ -477,7 +710,11 @@ public class ChessBoard : MonoBehaviour
         Pieces[7, 0] = SpawnSinglePiece(ChessPieceType.Rook, TEAM_WHITE);
         for(int x = 0; x < TILE_COUNT_X; x++)
         {
-            Pieces[x, 1] = SpawnSinglePiece(ChessPieceType.Pawn, TEAM_WHITE);
+            if (x == 2)
+                Pieces[x, 4] = SpawnSinglePiece(ChessPieceType.Pawn, TEAM_WHITE);
+            else
+                Pieces[x, 1] = SpawnSinglePiece(ChessPieceType.Pawn, TEAM_WHITE);
+            
         }
 
         Pieces[0, 7] = SpawnSinglePiece(ChessPieceType.Rook, TEAM_BLACK);
