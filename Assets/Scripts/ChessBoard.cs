@@ -159,7 +159,7 @@ public class ChessBoard : MonoBehaviour
                 piece.CurrentX = move.x;
                 piece.CurrentY = move.y;
                 Pieces[currenPosition.x, currenPosition.y] = null;
-                var val = Minimax(Pieces.Clone() as Pieces[,], 3, false);
+                var val = Minimax(Pieces.Clone() as Pieces[,], 4, false, int.MinValue, int.MaxValue);
                 Pieces[currenPosition.x, currenPosition.y] = piece;
                 piece.CurrentX = currenPosition.x;
                 piece.CurrentY = currenPosition.y;
@@ -210,10 +210,10 @@ public class ChessBoard : MonoBehaviour
         return whiteKing == null || blackKing == null;
     }
 
-    private int Minimax(Pieces[,] pieces, int depth, bool isMaximizingPlayer)
+    private int Minimax(Pieces[,] pieces, int depth, bool isMaximizingPlayer, int alpha, int beta)
     {
         if (depth == 0 || IsGameOver(pieces))
-            return Evaluate(pieces, isMaximizingPlayer ? TEAM_BLACK : TEAM_WHITE);
+            return Evaluate(pieces, TEAM_BLACK);
 
         if (isMaximizingPlayer)
         {
@@ -232,7 +232,7 @@ public class ChessBoard : MonoBehaviour
                     piece.CurrentX = move.x;
                     piece.CurrentY = move.y;
                     pieces[currenPosition.x, currenPosition.y] = null;
-                    var val = Minimax(pieces.Clone() as Pieces[,], depth - 1, false);
+                    var val = Minimax(pieces.Clone() as Pieces[,], depth - 1, false, alpha, beta);
                     pieces[currenPosition.x, currenPosition.y] = piece;
                     piece.CurrentX = currenPosition.x;
                     piece.CurrentY = currenPosition.y;
@@ -241,7 +241,15 @@ public class ChessBoard : MonoBehaviour
                     {
                         maxVal = val;
                     }
+                    if (maxVal > alpha)
+                        alpha = maxVal;
+
+                    if (beta <= alpha)
+                        break;
                 }
+
+                if (beta <= alpha)
+                    break;
             }
 
             return maxVal;
@@ -263,7 +271,7 @@ public class ChessBoard : MonoBehaviour
                     piece.CurrentX = move.x;
                     piece.CurrentY = move.y;
                     pieces[currenPosition.x, currenPosition.y] = null;
-                    var val = Minimax(pieces.Clone() as Pieces[,], depth - 1, true);
+                    var val = Minimax(pieces.Clone() as Pieces[,], depth - 1, true, alpha, beta);
                     pieces[currenPosition.x, currenPosition.y] = piece;
                     piece.CurrentX = currenPosition.x;
                     piece.CurrentY = currenPosition.y;
@@ -272,7 +280,16 @@ public class ChessBoard : MonoBehaviour
                     {
                         minVal = val;
                     }
+
+                    if (minVal < beta)
+                        beta = minVal;
+
+                    if (beta <= alpha)
+                        break;
                 }
+
+                if (beta <= alpha)
+                    break;
             }
 
             return minVal;
@@ -710,11 +727,7 @@ public class ChessBoard : MonoBehaviour
         Pieces[7, 0] = SpawnSinglePiece(ChessPieceType.Rook, TEAM_WHITE);
         for(int x = 0; x < TILE_COUNT_X; x++)
         {
-            if (x == 2)
-                Pieces[x, 4] = SpawnSinglePiece(ChessPieceType.Pawn, TEAM_WHITE);
-            else
-                Pieces[x, 1] = SpawnSinglePiece(ChessPieceType.Pawn, TEAM_WHITE);
-            
+            Pieces[x, 1] = SpawnSinglePiece(ChessPieceType.Pawn, TEAM_WHITE);
         }
 
         Pieces[0, 7] = SpawnSinglePiece(ChessPieceType.Rook, TEAM_BLACK);
