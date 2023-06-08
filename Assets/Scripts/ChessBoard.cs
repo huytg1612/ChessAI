@@ -138,6 +138,21 @@ public class ChessBoard : MonoBehaviour
         return result;
     }
 
+    public void Shuffle(List<Pieces> list)
+    {
+        System.Random rng = new System.Random();
+
+        int n = list.Count;
+        while (n > 1)
+        {
+            n--;
+            int k = rng.Next(n + 1);
+            Pieces value = list[k];
+            list[k] = list[n];
+            list[n] = value;
+        }
+    }
+
     private void AIMove()
     {
         Minimax(Pieces.Clone() as Pieces[,], MaxDepth, true, int.MinValue, int.MaxValue);   
@@ -184,7 +199,8 @@ public class ChessBoard : MonoBehaviour
         {
             int maxVal = int.MinValue;
             List<Pieces> blackPieces = GetPiecesByTeam(ref pieces, TEAM_BLACK);
-            foreach(var piece in blackPieces)
+            Shuffle(blackPieces);
+            foreach (var piece in blackPieces)
             {
                 var availableMoves = piece.GetAvailableMoves(ref pieces, TILE_COUNT_X, TILE_COUNT_Y);
                 foreach(var move in availableMoves)
@@ -235,6 +251,7 @@ public class ChessBoard : MonoBehaviour
         {
             int minVal = int.MaxValue;
             List<Pieces> whitePieces = GetPiecesByTeam(ref pieces, TEAM_WHITE);
+            Shuffle(whitePieces);
             foreach (var piece in whitePieces)
             {
                 var availableMoves = piece.GetAvailableMoves(ref pieces, TILE_COUNT_X, TILE_COUNT_Y);
