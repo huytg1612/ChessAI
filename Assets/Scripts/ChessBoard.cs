@@ -15,12 +15,13 @@ public enum SpecialMove
 public enum ChessPiecePoint
 {
     Pawn = 10,
-    Rook = 50,
     Knight = 30,
     Bishop = 30,
+    Rook = 50,
     Queen = 90,
     King = 900
 }
+
 public class ChessBoard : MonoBehaviour
 {
     [Header("Art")]
@@ -58,6 +59,12 @@ public class ChessBoard : MonoBehaviour
     private SpecialMove SpecialMove;
     private List<Vector2Int[]> MoveList = new List<Vector2Int[]>();
     // Start is called before the first frame update
+
+    private Pieces PieckedPiece;
+    private Vector2Int BestMove = -Vector2Int.one;
+    private int MaxDepth = 4;
+    private int BestValue = int.MinValue;
+
     void Start()
     {
         
@@ -133,59 +140,17 @@ public class ChessBoard : MonoBehaviour
 
     private void AIMove()
     {
-        List<Pieces> blackPieces = GetPiecesByTeam(ref Pieces, TEAM_BLACK);
-        List<Pieces> whitePieces = GetPiecesByTeam(ref Pieces, TEAM_WHITE);
-        Debug.Log("Black Pieces: " + blackPieces.Count);
-        Debug.Log("White Pieces: " + whitePieces.Count);
-        Pieces pickedPiece = null;
-        Vector2Int bestMove = -Vector2Int.one;
-        List<Vector2Int> availableMoves = new List<Vector2Int>();
-        int bestValue = int.MinValue;
+        Minimax(Pieces.Clone() as Pieces[,], MaxDepth, true, int.MinValue, int.MaxValue);   
 
-        foreach (var piece in blackPieces)
+        if(PieckedPiece != null)
         {
-            AvailableMoves = piece.GetAvailableMoves(ref Pieces, TILE_COUNT_X, TILE_COUNT_Y);
-            //Get a list of special moves
-            //piece.GetSpecialMoves(ref Pieces, ref MoveList, ref AvailableMoves);
-            //PreventCheck();
-            foreach(var move in AvailableMoves)
-            {
-                var currenPosition = new Vector2Int(piece.CurrentX, piece.CurrentY);
-                Pieces targetPiece = null;
-                if (Pieces[move.x, move.y] != null)
-                    targetPiece = Pieces[move.x, move.y].Clone();
-
-                Pieces[move.x, move.y] = piece;
-                piece.CurrentX = move.x;
-                piece.CurrentY = move.y;
-                Pieces[currenPosition.x, currenPosition.y] = null;
-                var val = Minimax(Pieces.Clone() as Pieces[,], 4, false, int.MinValue, int.MaxValue);
-                Pieces[currenPosition.x, currenPosition.y] = piece;
-                piece.CurrentX = currenPosition.x;
-                piece.CurrentY = currenPosition.y;
-                Pieces[move.x, move.y] = targetPiece;
-                if(val > bestValue)
-                {
-                    bestMove = move;
-                    bestValue = val;
-                    pickedPiece = piece;
-                    availableMoves = new List<Vector2Int>(AvailableMoves);
-                }
-            }
-        }
-
-        if(pickedPiece != null)
-        {
-            Debug.Log("Picked piece: " + pickedPiece);
-            Debug.Log("From: " + new Vector2Int(pickedPiece.CurrentX, pickedPiece.CurrentY));
-            AvailableMoves = availableMoves;
-            MoveTo(pickedPiece, bestMove.x, bestMove.y);
+            Debug.Log("Picked piece: " + PieckedPiece);
+            Debug.Log("From: " + new Vector2Int(PieckedPiece.CurrentX, PieckedPiece.CurrentY));
+            Debug.Log("Move: " + BestMove);
+            Debug.Log("Value: " + BestValue);
+            MoveTo(PieckedPiece, BestMove.x, BestMove.y);
             RemoveHightlight();
         }
-
-        Debug.Log("Move: " + bestMove);
-        Debug.Log("Value: " + bestValue);
-
     }
 
     private bool IsGameOver(Pieces[,] pieces)
@@ -224,22 +189,34 @@ public class ChessBoard : MonoBehaviour
                 var availableMoves = piece.GetAvailableMoves(ref pieces, TILE_COUNT_X, TILE_COUNT_Y);
                 foreach(var move in availableMoves)
                 {
+                    #region Move
                     var currenPosition = new Vector2Int(piece.CurrentX, piece.CurrentY);
                     Pieces targetPiece = null;
+                    //If the move is enemy
                     if (pieces[move.x, move.y] != null)
                         targetPiece = pieces[move.x, move.y].Clone();
                     pieces[move.x, move.y] = piece;
                     piece.CurrentX = move.x;
                     piece.CurrentY = move.y;
                     pieces[currenPosition.x, currenPosition.y] = null;
+                    #endregion
                     var val = Minimax(pieces.Clone() as Pieces[,], depth - 1, false, alpha, beta);
+                    #region Undo
                     pieces[currenPosition.x, currenPosition.y] = piece;
                     piece.CurrentX = currenPosition.x;
                     piece.CurrentY = currenPosition.y;
                     pieces[move.x, move.y] = targetPiece;
+                    #endregion
                     if (val > maxVal)
                     {
                         maxVal = val;
+                        if(depth == MaxDepth)
+                        {
+                            PieckedPiece = piece;
+                            BestMove = move;
+                            AvailableMoves = availableMoves;
+                            BestValue = maxVal;
+                        }
                     }
                     if (maxVal > alpha)
                         alpha = maxVal;
@@ -263,6 +240,7 @@ public class ChessBoard : MonoBehaviour
                 var availableMoves = piece.GetAvailableMoves(ref pieces, TILE_COUNT_X, TILE_COUNT_Y);
                 foreach (var move in availableMoves)
                 {
+                    #region Move
                     var currenPosition = new Vector2Int(piece.CurrentX, piece.CurrentY);
                     Pieces targetPiece = null;
                     if (pieces[move.x, move.y] != null)
@@ -271,11 +249,14 @@ public class ChessBoard : MonoBehaviour
                     piece.CurrentX = move.x;
                     piece.CurrentY = move.y;
                     pieces[currenPosition.x, currenPosition.y] = null;
+                    #endregion
                     var val = Minimax(pieces.Clone() as Pieces[,], depth - 1, true, alpha, beta);
+                    #region Undo
                     pieces[currenPosition.x, currenPosition.y] = piece;
                     piece.CurrentX = currenPosition.x;
                     piece.CurrentY = currenPosition.y;
                     pieces[move.x, move.y] = targetPiece;
+                    #endregion
                     if (val < minVal)
                     {
                         minVal = val;
