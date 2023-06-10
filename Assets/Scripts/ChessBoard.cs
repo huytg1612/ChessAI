@@ -1,9 +1,10 @@
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
+//Các nước đi đặc biệt
 public enum SpecialMove
 {
     None = 0,
@@ -12,6 +13,7 @@ public enum SpecialMove
     Promotion
 }
 
+//Điểm cho từng loại chess
 public enum ChessPiecePoint
 {
     Pawn = 10,
@@ -58,7 +60,6 @@ public class ChessBoard : MonoBehaviour
     private int CurrentTurn;
     private SpecialMove SpecialMove;
     private List<Vector2Int[]> MoveList = new List<Vector2Int[]>();
-    // Start is called before the first frame update
 
     private Pieces PieckedPiece;
     private Vector2Int BestMove = -Vector2Int.one;
@@ -70,6 +71,7 @@ public class ChessBoard : MonoBehaviour
         
     }
 
+    //Tính điểm trên bàn cờ cho AI
     private int Evaluate(Pieces[,] pieces, int teamColor)
     {
         int whitePoint = 0;
@@ -122,6 +124,7 @@ public class ChessBoard : MonoBehaviour
             return blackPoint - whitePoint;
     }
 
+    //Lẩy các quân cờ theo team
     private List<Pieces> GetPiecesByTeam(ref Pieces[,] pieces, int teamColor)
     {
         var result = new List<Pieces>();
@@ -138,6 +141,7 @@ public class ChessBoard : MonoBehaviour
         return result;
     }
 
+    //Random các lựa chọn quân cờ cho AI
     public void Shuffle(List<Pieces> list)
     {
         System.Random rng = new System.Random();
@@ -153,6 +157,7 @@ public class ChessBoard : MonoBehaviour
         }
     }
 
+    //Lượt chơi của AI
     private void AIMove()
     {
         Minimax(Pieces.Clone() as Pieces[,], MaxDepth, true, int.MinValue, int.MaxValue);   
@@ -169,6 +174,7 @@ public class ChessBoard : MonoBehaviour
         }
     }
 
+    //Kiểm tra game đã kết thúc chưa (chỉ dùng cho AI)
     private bool IsGameOver(Pieces[,] pieces)
     {
         Pieces whiteKing = null;
@@ -191,6 +197,7 @@ public class ChessBoard : MonoBehaviour
         return whiteKing == null || blackKing == null;
     }
 
+    //Tính nước đi tốt nhất cho AI
     private int Minimax(Pieces[,] pieces, int depth, bool isMaximizingPlayer, int alpha, int beta)
     {
         if (depth == 0 || IsGameOver(pieces))
@@ -402,6 +409,7 @@ public class ChessBoard : MonoBehaviour
         }
     }
 
+    //Di chuyển quân cờ tới vị trí chỉ định
     private bool MoveTo(Pieces piece, int x, int y)
     {
         if(!IsTileAvailableMove(ref AvailableMoves, new Vector2Int(x, y)))
@@ -474,6 +482,7 @@ public class ChessBoard : MonoBehaviour
         return true;
     }
 
+    //Hậu xử lý các nước đi đặc biệt
     private void ProcessSpecialMove()
     {
         if(SpecialMove == SpecialMove.EnPassant)
@@ -583,6 +592,7 @@ public class ChessBoard : MonoBehaviour
         }
     }
 
+    //Kiểm tra checkmate
     private bool CheckForCheckmate()
     {
         var lastMove = MoveList[MoveList.Count - 1];
@@ -647,6 +657,7 @@ public class ChessBoard : MonoBehaviour
         PositionAllPieces();
     }
 
+    //Tạo bàn cờ ảo
     public void GenerateAllTiles(float tileSize, int tileCountX, int tileCountY)
     {
         YOffset += transform.position.y;
@@ -662,6 +673,7 @@ public class ChessBoard : MonoBehaviour
         }
     }
 
+    //Tạo các ô cờ ảo
     private GameObject GenerateSingleTile(float tileSize, int x, int y)
     {
         GameObject tileObject = new GameObject($"X: {x}, Y: {y}");
@@ -693,7 +705,7 @@ public class ChessBoard : MonoBehaviour
         return tileObject;
     }
 
-    //Get the gameobject's position which is hit
+    //Trả về ví trí của quân cờ khi nó được chọn
     private Vector2Int LookupTileIndex(GameObject hitInfo)
     {
         for(int x = 0; x < TILE_COUNT_X; x++)
@@ -709,7 +721,7 @@ public class ChessBoard : MonoBehaviour
         return -Vector2Int.one;
     }
 
-    //Spawning of the Pieces
+    //Tạo các quân cờ
     private void SpawnAllPieces()
     {
         Pieces = new Pieces[TILE_COUNT_X, TILE_COUNT_Y];
@@ -741,6 +753,7 @@ public class ChessBoard : MonoBehaviour
         }
     }
 
+    //Tạo từng quân cờ
     private Pieces SpawnSinglePiece(ChessPieceType type, int team)
     {
         //Spawn object and get object's component
@@ -752,7 +765,7 @@ public class ChessBoard : MonoBehaviour
         return piece;
     }
 
-    //Positioning
+    //Sắp xếp vị trí các quân cờ
     private void PositionAllPieces()
     {
         for(int x = 0; x < TILE_COUNT_X; x++)
@@ -767,6 +780,7 @@ public class ChessBoard : MonoBehaviour
         }
     }
 
+    //Xếp quân cờ vào chính giữa ô cờ
     private Vector3 GetTileCenter(int x, int y)
     {
         return new Vector3(x * TileSize, YOffset, y * TileSize) - Bound + new Vector3(TileSize / 2, 0, TileSize / 2);
@@ -777,6 +791,7 @@ public class ChessBoard : MonoBehaviour
         return new Vector3(x * TileSize, YOffset - 0.2f, y * TileSize);
     }
 
+    //Sắp xếp vị trí cho quân cờ
     private void PositionSinglePiece(int x, int y, bool force = true)
     {
         //Store the piece's current position
@@ -786,7 +801,7 @@ public class ChessBoard : MonoBehaviour
         Pieces[x, y].SetPosition(GetTileCenter(x, y), force);
     }
 
-    //Hightlight available moves
+    //Highlight các nước đi khả thi của quân cờ
     private void HightlightAvailableMoves()
     {
         foreach(var move in AvailableMoves)
@@ -795,6 +810,7 @@ public class ChessBoard : MonoBehaviour
         }
     }
 
+    //Remove highlght
     private void RemoveHightlight()
     {
         foreach(var move in AvailableMoves)
@@ -804,6 +820,7 @@ public class ChessBoard : MonoBehaviour
         AvailableMoves.Clear();
     }
 
+    //Kiểm tra nước đi có hợp lệ không
     private bool IsTileAvailableMove(ref List<Vector2Int> availableMoves, Vector2Int currentHover)
     {
         foreach(var move in availableMoves)
@@ -815,17 +832,20 @@ public class ChessBoard : MonoBehaviour
         return false;
     }
 
+    //Xử lý checkmate
     private void CheckMate(int winningTeam)
     {
         DisplayVictoryTeam(winningTeam);
     }
 
+    //Hiển thị menu checkmate
     private void DisplayVictoryTeam(int winningTeam)
     {
         VictoryScreen.SetActive(true);
         VictoryScreen.transform.GetChild(winningTeam).gameObject.SetActive(true);
     }
 
+    //Loại bỏ các nước đi gây nguy hiểm cho King
     private void PreventCheck()
     {
         Pieces targetKing = null;
@@ -850,6 +870,7 @@ public class ChessBoard : MonoBehaviour
         SimulateMoveForSinglePiece(CurrentlyDragging, ref AvailableMoves, targetKing);
     }
 
+    //Loại bỏ các nước đi gây nguy hiểm cho King
     private void SimulateMoveForSinglePiece(Pieces piece, ref List<Vector2Int> moves, Pieces targetKing)
     {
         //Save the current value, to reset after the function call
@@ -928,6 +949,7 @@ public class ChessBoard : MonoBehaviour
         }
     }
 
+    //Action khi click vào nút Reset
     public void OnResetButton()
     {
         ////Disable canvas
@@ -939,6 +961,7 @@ public class ChessBoard : MonoBehaviour
         SceneManager.LoadScene(scene.name);
     }
 
+    //Action khi click vào nút Exit
     public void OnExitButton()
     {
         Application.Quit();
