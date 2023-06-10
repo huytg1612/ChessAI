@@ -60,7 +60,7 @@ public class Pieces : MonoBehaviour
         return result;
     }
 
-    public virtual void SetScale(Vector3 scale, bool force = false)
+    public virtual void SetScale(Vector3 scale, bool force = true)
     {
         desiredScale = scale;
         if (force)

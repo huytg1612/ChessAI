@@ -163,6 +163,7 @@ public class ChessBoard : MonoBehaviour
             Debug.Log("From: " + new Vector2Int(PieckedPiece.CurrentX, PieckedPiece.CurrentY));
             Debug.Log("Move: " + BestMove);
             Debug.Log("Value: " + BestValue);
+            Debug.Log("--------------------------------------------");
             MoveTo(PieckedPiece, BestMove.x, BestMove.y);
             RemoveHightlight();
         }
@@ -621,22 +622,17 @@ public class ChessBoard : MonoBehaviour
         }
 
         // Are we in check right now?
-        if(IsTileAvailableMove(ref currentAvailableMoves, new Vector2Int(targetKing.CurrentX, targetKing.CurrentY)))
+        //King is under attack, can we move something to help him?
+        for (int i = 0; i < defendingPieces.Count; i++)
         {
-            //King is under attack, can we move something to help him?
-            for(int i = 0; i < defendingPieces.Count; i++)
-            {
-                List<Vector2Int> defendingMoves = defendingPieces[i].GetAvailableMoves(ref Pieces, TILE_COUNT_X, TILE_COUNT_Y);
-                SimulateMoveForSinglePiece(defendingPieces[i], ref defendingMoves, targetKing);
+            List<Vector2Int> defendingMoves = defendingPieces[i].GetAvailableMoves(ref Pieces, TILE_COUNT_X, TILE_COUNT_Y);
+            SimulateMoveForSinglePiece(defendingPieces[i], ref defendingMoves, targetKing);
 
-                if (defendingMoves.Count != 0)
-                    return false;
-            }
-
-            return true; // Checkmate exist
+            if (defendingMoves.Count != 0)
+                return false;
         }
 
-        return false;
+        return true; // Checkmate exist
     }
 
     private void Awake()
@@ -778,7 +774,7 @@ public class ChessBoard : MonoBehaviour
         return new Vector3(x * TileSize, YOffset - 0.2f, y * TileSize);
     }
 
-    private void PositionSinglePiece(int x, int y, bool force = false)
+    private void PositionSinglePiece(int x, int y, bool force = true)
     {
         //Store the piece's current position
         Pieces[x, y].CurrentX = x;
