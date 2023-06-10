@@ -304,96 +304,99 @@ public class ChessBoard : MonoBehaviour
             return;
         }
 
-        if (CurrentTurn == TEAM_BLACK)
+        if (!VictoryScreen.activeSelf)
         {
-            AIMove();
-        }
-        else
-        {
-            RaycastHit hitInfo; //Get the gameobject's info when it is hit
-            Ray ray = CurrentCamera.ScreenPointToRay(Input.mousePosition); //Whenever mouse moved, get the Ray
-
-            //IF the Ray hit the game object with Layer Mask named "Tile, Hover, Highlight", get the gameobject info 
-            if (Physics.Raycast(ray, out hitInfo, 100, LayerMask.GetMask("Tile", "Hover", "Highlight")))
+            if (CurrentTurn == TEAM_BLACK)
             {
-                Vector2Int hitPosition = LookupTileIndex(hitInfo.transform.gameObject);
-
-                //If the previous hover is nothing, we set the currentHover to hitPosition
-                if (CurrentHover == -Vector2Int.one)
-                {
-                    CurrentHover = hitPosition;
-                    Tiles[hitPosition.x, hitPosition.y].layer = LayerMask.NameToLayer("Hover");
-                }
-
-                //If the hitPosition is different from the previous hover, set the previous hover to Tile and the hitPosition to current 
-                if (CurrentHover != hitPosition)
-                {
-                    Tiles[CurrentHover.x, CurrentHover.y].layer = IsTileAvailableMove(ref AvailableMoves, CurrentHover) ? LayerMask.NameToLayer("Highlight") : LayerMask.NameToLayer("Tile");
-                    CurrentHover = hitPosition;
-                    Tiles[hitPosition.x, hitPosition.y].layer = LayerMask.NameToLayer("Hover");
-                }
-
-                //If pick the piece up
-                if (Input.GetMouseButtonDown(0))
-                {
-                    if (Pieces[hitPosition.x, hitPosition.y] != null)
-                    {
-                        if (CurrentTurn == Pieces[hitPosition.x, hitPosition.y].Team && CurrentTurn == TEAM_WHITE)
-                        {
-                            CurrentlyDragging = Pieces[hitPosition.x, hitPosition.y];
-                            AvailableMoves = CurrentlyDragging.GetAvailableMoves(ref Pieces, TILE_COUNT_X, TILE_COUNT_Y);
-                            //Get a list of special moves
-                            SpecialMove = CurrentlyDragging.GetSpecialMoves(ref Pieces, ref MoveList, ref AvailableMoves);
-                            PreventCheck();
-                            HightlightAvailableMoves();
-                        }
-                    }
-                }
-
-                //If put the piece down
-                if (Input.GetMouseButtonUp(0) && CurrentlyDragging != null)
-                {
-                    Vector2Int previousPosition = new Vector2Int(CurrentlyDragging.CurrentX, CurrentlyDragging.CurrentY);
-
-                    bool validMove = MoveTo(CurrentlyDragging, hitPosition.x, hitPosition.y);
-                    if (!validMove)
-                    {
-                        CurrentlyDragging.SetPosition(GetTileCenter(previousPosition.x, previousPosition.y));
-                    }
-
-                    CurrentlyDragging = null;
-                    RemoveHightlight();
-                }
-
+                AIMove();
             }
-            //If the mouse move out side of the ChessBoard, reset the previous Tile's Layer Mask
             else
             {
-                if (CurrentHover != -Vector2Int.one)
+                RaycastHit hitInfo; //Get the gameobject's info when it is hit
+                Ray ray = CurrentCamera.ScreenPointToRay(Input.mousePosition); //Whenever mouse moved, get the Ray
+
+                //IF the Ray hit the game object with Layer Mask named "Tile, Hover, Highlight", get the gameobject info 
+                if (Physics.Raycast(ray, out hitInfo, 100, LayerMask.GetMask("Tile", "Hover", "Highlight")))
                 {
-                    Tiles[CurrentHover.x, CurrentHover.y].layer = IsTileAvailableMove(ref AvailableMoves, CurrentHover) ? LayerMask.NameToLayer("Highlight") : LayerMask.NameToLayer("Tile");
-                    CurrentHover = -Vector2Int.one;
+                    Vector2Int hitPosition = LookupTileIndex(hitInfo.transform.gameObject);
+
+                    //If the previous hover is nothing, we set the currentHover to hitPosition
+                    if (CurrentHover == -Vector2Int.one)
+                    {
+                        CurrentHover = hitPosition;
+                        Tiles[hitPosition.x, hitPosition.y].layer = LayerMask.NameToLayer("Hover");
+                    }
+
+                    //If the hitPosition is different from the previous hover, set the previous hover to Tile and the hitPosition to current 
+                    if (CurrentHover != hitPosition)
+                    {
+                        Tiles[CurrentHover.x, CurrentHover.y].layer = IsTileAvailableMove(ref AvailableMoves, CurrentHover) ? LayerMask.NameToLayer("Highlight") : LayerMask.NameToLayer("Tile");
+                        CurrentHover = hitPosition;
+                        Tiles[hitPosition.x, hitPosition.y].layer = LayerMask.NameToLayer("Hover");
+                    }
+
+                    //If pick the piece up
+                    if (Input.GetMouseButtonDown(0))
+                    {
+                        if (Pieces[hitPosition.x, hitPosition.y] != null)
+                        {
+                            if (CurrentTurn == Pieces[hitPosition.x, hitPosition.y].Team && CurrentTurn == TEAM_WHITE)
+                            {
+                                CurrentlyDragging = Pieces[hitPosition.x, hitPosition.y];
+                                AvailableMoves = CurrentlyDragging.GetAvailableMoves(ref Pieces, TILE_COUNT_X, TILE_COUNT_Y);
+                                //Get a list of special moves
+                                SpecialMove = CurrentlyDragging.GetSpecialMoves(ref Pieces, ref MoveList, ref AvailableMoves);
+                                PreventCheck();
+                                HightlightAvailableMoves();
+                            }
+                        }
+                    }
+
+                    //If put the piece down
+                    if (Input.GetMouseButtonUp(0) && CurrentlyDragging != null)
+                    {
+                        Vector2Int previousPosition = new Vector2Int(CurrentlyDragging.CurrentX, CurrentlyDragging.CurrentY);
+
+                        bool validMove = MoveTo(CurrentlyDragging, hitPosition.x, hitPosition.y);
+                        if (!validMove)
+                        {
+                            CurrentlyDragging.SetPosition(GetTileCenter(previousPosition.x, previousPosition.y));
+                        }
+
+                        CurrentlyDragging = null;
+                        RemoveHightlight();
+                    }
+
+                }
+                //If the mouse move out side of the ChessBoard, reset the previous Tile's Layer Mask
+                else
+                {
+                    if (CurrentHover != -Vector2Int.one)
+                    {
+                        Tiles[CurrentHover.x, CurrentHover.y].layer = IsTileAvailableMove(ref AvailableMoves, CurrentHover) ? LayerMask.NameToLayer("Highlight") : LayerMask.NameToLayer("Tile");
+                        CurrentHover = -Vector2Int.one;
+                    }
+
+                    //Prevent the case, move chess out of board.
+                    if (CurrentlyDragging && Input.GetMouseButtonUp(0))
+                    {
+                        CurrentlyDragging.SetPosition(GetTileCenter(CurrentlyDragging.CurrentX, CurrentlyDragging.CurrentY));
+                        CurrentlyDragging = null;
+                        RemoveHightlight();
+                    }
                 }
 
-                //Prevent the case, move chess out of board.
-                if (CurrentlyDragging && Input.GetMouseButtonUp(0))
+                if (CurrentlyDragging)
                 {
-                    CurrentlyDragging.SetPosition(GetTileCenter(CurrentlyDragging.CurrentX, CurrentlyDragging.CurrentY));
-                    CurrentlyDragging = null;
-                    RemoveHightlight();
-                }
-            }
+                    //Create a plane which is above the chess board
+                    Plane plane = new Plane(Vector3.up, Vector3.up * YOffset);
+                    float distance = 0.0f;
 
-            if (CurrentlyDragging)
-            {
-                //Create a plane which is above the chess board
-                Plane plane = new Plane(Vector3.up, Vector3.up * YOffset);
-                float distance = 0.0f;
-
-                //Stick the Piece to the Plane
-                if (plane.Raycast(ray, out distance))
-                {
-                    CurrentlyDragging.SetPosition(ray.GetPoint(distance) + Vector3.up * DragOffset);
+                    //Stick the Piece to the Plane
+                    if (plane.Raycast(ray, out distance))
+                    {
+                        CurrentlyDragging.SetPosition(ray.GetPoint(distance) + Vector3.up * DragOffset);
+                    }
                 }
             }
         }
